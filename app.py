@@ -1,6 +1,7 @@
 # To run streamlit you must type streamlit run app.py in the terminal.
 # To clear the current run and refresh with new visuals press CTRL + C to stop the already running app
 import streamlit as st
+st.set_page_config(layout="wide")
 import pandas as pd
 import pickle
 import requests
@@ -9,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import calendar
 from datetime import datetime
+from datetime import datetime, timedelta
+
 
 # Define GitHub raw file URL
 github_url = "https://raw.githubusercontent.com/AmyHumke12/SolarProject/main/bi_solar_dashboard_final.pkl"
@@ -104,66 +107,218 @@ if df is not None:
         x_col = "YearMonth"
 
     ################################    LINE CHART ########################################################
-    # ✅ Solar Production vs. Consumption (Line Chart with Labels)
-    st.write(f"### {period_option}-Aggregated Solar Production vs. Consumption")
-    fig, ax = plt.subplots(figsize=(10, 5))
+    
+# ✅ Production & Consumption (Lines) + Net Usage (Bars) on the Same Axis
+st.write(f"### {period_option}-Aggregated Solar Production, Consumption, and Net Usage")
 
-    # Plot the lines
-    ax.plot(df_filtered[x_col].astype(str), df_filtered['Production'], label='Solar Production (kWh)', color='green')
-    ax.plot(df_filtered[x_col].astype(str), df_filtered['Consumption'], label='Consumption (kWh)', color='blue', linestyle="--")
+fig, ax = plt.subplots(figsize=(10, 5))
 
-    # Add labels to Production line
-    for i, txt in enumerate(df_filtered['Production']):
-        ax.text(i, txt, f'{int(txt)}', ha='center', va='bottom' if txt > 0 else 'top', fontsize=8, color='green')
+# ✅ Plot Net Usage as a bar chart (Transparent for visibility)
+ax.bar(df_filtered[x_col].astype(str), df_filtered['Unified_Net_Usage'], 
+       label='Net Usage (kWh)', color='#8B0000', alpha=0.5, zorder=1)
 
-    # Add labels to Consumption line
-    for i, txt in enumerate(df_filtered['Consumption']):
-        ax.text(i, txt, f'{int(txt)}', ha='center', va='bottom' if txt > 0 else 'top', fontsize=8, color='blue')
+# ✅ Plot Solar Production as a line
+ax.plot(df_filtered[x_col].astype(str), df_filtered['Production'], 
+        label='Solar Production (kWh)', color='#228B22', marker='o', zorder=2)
 
-    ax.set_xlabel(period_option)
-    ax.set_ylabel("kWh")
-    ax.legend()
-    ax.grid(True)
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
+# ✅ Plot Consumption as a line
+ax.plot(df_filtered[x_col].astype(str), df_filtered['Consumption'], 
+        label='Consumption (kWh)', color='#1E90FF', linestyle="--", marker='o', zorder=2)
 
-################################    STACKED BAR CHART ########################################################
-# ✅ Add Labels to Stacked Bar Chart
-st.write(f"### {period_option}-Aggregated Net Usage, Production, and Consumption")
-x = np.arange(len(df_filtered))
-bar_width = 0.35
+# ✅ Ensure the axis is centered on zero for all elements
+ax.axhline(y=0, color='black', linestyle='--', linewidth=1, zorder=0)
 
-fig2, ax2 = plt.subplots(figsize=(12, 6))
-bottom_values = np.minimum(df_filtered['Unified_Production'], df_filtered['Unified_Consumption'])
-top_values = np.maximum(df_filtered['Unified_Production'], df_filtered['Unified_Consumption']) - bottom_values
-bottom_label = df_filtered['Unified_Production'] <= df_filtered['Unified_Consumption']
+# ✅ Axis Labels and Legends
+ax.set_xlabel(period_option)
+ax.set_ylabel("Energy (kWh)")
+ax.legend(loc="upper left")
 
-bars1 = ax2.bar(x - bar_width, df_filtered['Unified_Net_Usage'], width=bar_width, label='Net Usage', color='limegreen')
-bars2 = ax2.bar(x, bottom_values, width=bar_width, color=np.where(bottom_label, 'orange', 'darkblue'), label='Production')
-bars3 = ax2.bar(x, top_values, bottom=bottom_values, width=bar_width, color=np.where(bottom_label, 'darkblue', 'orange'), label='Consumption')
-
-# Add data labels for Net Usage
-for bar in bars1:
-    height = bar.get_height()
-    if height != 0:
-        ax2.text(bar.get_x() + bar.get_width() / 2, height + 2, f'{int(height)}', ha='center', va='bottom')
-
-# Add data labels for stacked bars
-for bar2, bar3 in zip(bars2, bars3):
-    production_height = bar2.get_height()
-    usage_height = bar3.get_height() + production_height
-
-    # Bottom label
-    if production_height != 0:
-        ax2.text(bar2.get_x() + bar2.get_width() / 2, production_height / 2, f'{int(production_height)}', ha='center', va='center', color='white')
-
-    # Top label
-    if usage_height != 0:
-        ax2.text(bar3.get_x() + bar3.get_width() / 2, usage_height + 2, f'{int(usage_height)}', ha='center', va='bottom')
-
-ax2.set_xlabel(period_option)
-ax2.set_ylabel("kWh")
-ax2.legend(['Net Usage', 'Production', 'Consumption'])
+ax.grid(True, linestyle='--', alpha=0.6)
 plt.xticks(rotation=45)
-st.pyplot(fig2)
 
+st.pyplot(fig)
+
+
+
+
+
+################################    COST BAR CHART ########################################################
+
+# Define required columns for the cost bar chart
+cost_columns = ['Billing_Year', 'Billing_Month', 'Row_Level_Savings', 
+                'Row_Level_Payout', 'Cumulative_Realized_Savings', 'Remaining_Balance']
+
+# 🔹 STEP 1: Apply Date Filter to df BEFORE Selecting Cost Columns
+df_filtered_cost = df[
+    (df['date_timestamp'].dt.date >= date_range[0]) &
+    (df['date_timestamp'].dt.date <= date_range[1])
+].copy()
+
+# 🔹 STEP 2: Ensure `df_filtered_cost` Exists Even If Empty
+if df_filtered_cost.empty:
+    st.warning("⚠️ No cost data available for the selected date range.")
+    df_filtered_cost = pd.DataFrame(columns=cost_columns)  # Define an empty DataFrame with correct columns
+
+# 🔹 STEP 3: Check if Aggregation Level is Quarter
+if period_option == "Quarter":
+    df_filtered_cost["Fiscal_Quarter"] = df_filtered_cost["date_timestamp"].dt.month.apply(get_fiscal_quarter)
+
+    df_filtered_cost = df_filtered_cost.groupby(["Billing_Year", "Fiscal_Quarter"]).agg({
+        'Row_Level_Savings': 'sum',
+        'Row_Level_Payout': 'sum',
+        'Cumulative_Realized_Savings': 'max',
+        'Remaining_Balance': 'min'
+    }).reset_index()
+    
+    df_filtered_cost["Quarter_Label"] = df_filtered_cost["Billing_Year"].astype(str) + " " + df_filtered_cost["Fiscal_Quarter"]
+    x_col = "Quarter_Label"
+
+# 🔹 STEP 4: If Not Quarter, Use Monthly Aggregation
+else:
+    df_filtered_cost = df_filtered_cost[cost_columns].copy()
+
+    # Define a custom order for Billing Months (May - April)
+    month_order = ["May", "June", "July", "August", "September",
+                   "October", "November", "December", "January", "February", "March", "April"]
+
+    # Assign a numeric ordering for billing months based on the fiscal cycle
+    df_filtered_cost['Month_Order'] = df_filtered_cost['Billing_Month'].apply(lambda x: month_order.index(x))
+
+    # ✅ FIXED Aggregation: Ensure Savings & Payouts Don't Overlap Incorrectly
+    def filter_savings_or_payout(group):
+        if (group['Row_Level_Savings'] > 0).any() and (group['Row_Level_Payout'] > 0).any():
+            # If both exist, keep the one with the highest total in that month
+            if group['Row_Level_Savings'].sum() > group['Row_Level_Payout'].sum():
+                group['Row_Level_Payout'] = 0  # Remove Payout
+            else:
+                group['Row_Level_Savings'] = 0  # Remove Savings
+        return group
+
+    df_filtered_cost = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month', 'Month_Order']).agg({
+        'Row_Level_Savings': 'sum',
+        'Row_Level_Payout': 'sum',
+        'Cumulative_Realized_Savings': 'max',
+        'Remaining_Balance': 'min'
+    }).reset_index()
+
+    # ✅ Apply the fix to remove cases where both exist in a single month
+    df_filtered_cost = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month']).apply(filter_savings_or_payout).reset_index(drop=True)
+
+
+
+    # Sort by Billing Year first, then by Month Order
+    df_filtered_cost = df_filtered_cost.sort_values(by=['Billing_Year', 'Month_Order']).drop(columns=['Month_Order'])
+
+    # Create a new column for x-axis labeling using Billing_Year and Billing_Month
+    df_filtered_cost['YearMonth'] = df_filtered_cost.apply(lambda row: f"{row['Billing_Year']} {row['Billing_Month']}", axis=1)
+    x_col = "YearMonth"
+
+# 🔹 STEP 5: Create the bar chart
+st.write(f"### {period_option}-Aggregated Realized Savings and Payout Uncovered")
+
+fig, ax = plt.subplots(figsize=(14, 6))
+bar_width = 0.4
+x = range(len(df_filtered_cost))
+
+# Plot Realized Savings
+bars1 = ax.bar(x, df_filtered_cost['Row_Level_Savings'], width=bar_width, label='Realized Savings', color='#228B22')
+
+# Plot Payout Uncovered
+bars2 = ax.bar([i + bar_width for i in x], df_filtered_cost['Row_Level_Payout'], width=bar_width, label='Billed Amount', color='#8B0000')
+
+# Add labels to bars
+for bars in [bars1, bars2]:
+    for bar in bars:
+        height = bar.get_height()
+        if height > 0:
+            ax.text(bar.get_x() + bar.get_width() / 2, height + 2, f'${int(height)}',
+                    ha='center', va='bottom', fontsize=8)
+
+# Customize the chart
+ax.set_xlabel(period_option, fontsize=12)
+ax.set_ylabel('Amount ($)', fontsize=12)
+ax.set_title(f'{period_option}-Aggregated Realized Savings and Billed Amount', fontsize=16)
+
+# Ensure x-axis labels are aligned properly
+ax.set_xticks(range(len(df_filtered_cost)))
+ax.set_xticklabels(df_filtered_cost[x_col], rotation=45, ha='right')
+
+plt.legend(fontsize=12)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+
+st.pyplot(fig)
+
+
+
+################################    BREAK EVEN CHART ########################################################
+# Add a dynamic heading
+st.write("### Has the System Recovered Its Cost?")
+
+# Use df directly for Break-Even analysis
+df_break_even = df[['date_timestamp', 'Actual_Remaining_Balance', 'Estimated_Remaining_Balance', 'Data_Type_Label']].copy()
+df_break_even['date'] = df_break_even['date_timestamp'].dt.date
+
+# Get Yesterday's Date
+yesterday = datetime.now().date() - timedelta(days=1)
+
+# Get last available balance before yesterday
+data_up_to_yesterday = df_break_even[df_break_even['date'] <= yesterday]
+
+if not data_up_to_yesterday.empty:
+    last_row = data_up_to_yesterday.iloc[-1]
+    current_remaining_balance = last_row['Actual_Remaining_Balance']
+    current_date = last_row['date']
+    
+    # Only show the actual remaining balance
+    st.write(f"**As of {current_date}, the remaining balance is ${current_remaining_balance:.2f}.**")
+else:
+    st.write("No data available up to yesterday.")
+
+# Identify break-even points
+break_even_actual = df_break_even[df_break_even['Actual_Remaining_Balance'] <= 0]
+break_even_estimated = df_break_even[(df_break_even['Data_Type_Label'] == 'Estimated') & (df_break_even['Estimated_Remaining_Balance'] <= 0)]
+
+break_even_actual_date = break_even_actual.iloc[0]['date'] if not break_even_actual.empty else None
+break_even_estimated_date = break_even_estimated.iloc[0]['date'] if not break_even_estimated.empty else None
+
+if break_even_actual_date:
+    st.write(f"**Break-even for Actual Remaining Balance: {break_even_actual_date}**")
+else:
+    st.write("The Actual Remaining Balance does not reach zero within the available data.")
+
+if break_even_estimated_date:
+    st.write(f"**Break-even for Estimated Remaining Balance: {break_even_estimated_date}**")
+else:
+    st.write("The Estimated Remaining Balance does not reach zero within the available data.")
+
+# Plot Actual and Estimated Remaining Balances
+fig, ax = plt.subplots(figsize=(12, 6))
+
+# Plot Actual Remaining Balance
+ax.plot(df_break_even['date'], df_break_even['Actual_Remaining_Balance'], label='Actual Remaining Balance', color='#1E90FF')
+
+# Plot Estimated Remaining Balance
+estimated_data = df_break_even[df_break_even['Data_Type_Label'] == 'Estimated']
+if not estimated_data.empty:
+    ax.plot(estimated_data['date'], estimated_data['Estimated_Remaining_Balance'], label='Estimated Remaining Balance', color='#228B22')
+
+# Add the break-even lines
+if break_even_actual_date:
+    ax.axvline(x=break_even_actual_date, color='#1E90FF', linestyle='--', label=f'Actual Break-Even: {break_even_actual_date}')
+
+if break_even_estimated_date:
+    ax.axvline(x=break_even_estimated_date, color='#228B22', linestyle='--', label=f'Estimated Break-Even: {break_even_estimated_date}')
+
+# Add a horizontal line for zero balance
+ax.axhline(y=0, color='red', linestyle='--', label='Break-Even Point')
+
+# Configure the plot
+ax.set_xlabel('Date')
+ax.set_ylabel('Remaining Balance ($)')
+ax.set_title('Remaining Balance Over Time')
+ax.legend(loc='upper right')
+ax.grid(True)
+plt.tight_layout()
+
+st.pyplot(fig)
