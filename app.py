@@ -148,7 +148,7 @@ st.pyplot(fig)
 cost_columns = ['Billing_Year', 'Billing_Month', 'Row_Level_Savings', 
                 'Row_Level_Payout', 'Cumulative_Realized_Savings', 'Remaining_Balance']
 
-# 🔹 STEP 1: Apply Date Filter to df BEFORE Selecting Cost Columns
+# 🔹 STEP 1: Apply User-Selected Date Filters
 df_filtered_cost = df[
     (df['date_timestamp'].dt.date >= date_range[0]) &
     (df['date_timestamp'].dt.date <= date_range[1])
@@ -159,58 +159,76 @@ if df_filtered_cost.empty:
     st.warning("⚠️ No cost data available for the selected date range.")
     df_filtered_cost = pd.DataFrame(columns=cost_columns)  # Define an empty DataFrame with correct columns
 
-# 🔹 STEP 3: Check if Aggregation Level is Quarter
-if period_option == "Quarter":
-    df_filtered_cost["Fiscal_Quarter"] = df_filtered_cost["date_timestamp"].dt.month.apply(get_fiscal_quarter)
+# Define a custom order for Billing Months (May - April)
+month_order = ["May", "June", "July", "August", "September",
+               "October", "November", "December", "January", "February", "March", "April"]
 
-    df_filtered_cost = df_filtered_cost.groupby(["Billing_Year", "Fiscal_Quarter"]).agg({
+# Assign a numeric ordering for billing months based on the fiscal cycle
+df_filtered_cost['Month_Order'] = df_filtered_cost['Billing_Month'].apply(lambda x: month_order.index(x))
+
+# 🔹 STEP 3: Monthly Aggregation (BASE DATA)
+def filter_savings_or_payout(group):
+    if (group['Row_Level_Savings'] > 0).any() and (group['Row_Level_Payout'] > 0).any():
+        # Keep the one with the highest total in that month
+        if group['Row_Level_Savings'].sum() > group['Row_Level_Payout'].sum():
+            group['Row_Level_Payout'] = 0  # Remove Payout
+        else:
+            group['Row_Level_Savings'] = 0  # Remove Savings
+    return group
+
+df_monthly = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month', 'Month_Order']).agg({
+    'Row_Level_Savings': 'sum',
+    'Row_Level_Payout': 'sum',
+    'Cumulative_Realized_Savings': 'max',
+    'Remaining_Balance': 'min'
+}).reset_index()
+
+# ✅ Apply the fix to remove cases where both exist in a single month
+df_monthly = df_monthly.groupby(['Billing_Year', 'Billing_Month']).apply(filter_savings_or_payout).reset_index(drop=True)
+
+# Sort by Billing Year first, then by Month Order
+df_monthly = df_monthly.sort_values(by=['Billing_Year', 'Month_Order']).drop(columns=['Month_Order'])
+
+# Create a new column for x-axis labeling using Billing_Year and Billing_Month
+df_monthly['YearMonth'] = df_monthly.apply(lambda row: f"{row['Billing_Year']} {row['Billing_Month']}", axis=1)
+
+# 🔹 STEP 4: Aggregate from the Correct Monthly Data
+if period_option == "Year":
+    df_aggregated = df_monthly.groupby(["Billing_Year"]).agg({
         'Row_Level_Savings': 'sum',
         'Row_Level_Payout': 'sum',
-        'Cumulative_Realized_Savings': 'max',
-        'Remaining_Balance': 'min'
+        'Cumulative_Realized_Savings': 'max',  # Highest cumulative savings in the year
+        'Remaining_Balance': 'min'  # Lowest remaining balance
     }).reset_index()
-    
-    df_filtered_cost["Quarter_Label"] = df_filtered_cost["Billing_Year"].astype(str) + " " + df_filtered_cost["Fiscal_Quarter"]
+
+    x_col = "Billing_Year"
+
+elif period_option == "Quarter":
+    # Map Billing_Month to Fiscal Quarter
+    def get_fiscal_quarter(month):
+        if month in ["May", "June", "July"]:
+            return "Q1"
+        elif month in ["August", "September", "October"]:
+            return "Q2"
+        elif month in ["November", "December", "January"]:
+            return "Q3"
+        else:
+            return "Q4"
+
+    df_monthly["Fiscal_Quarter"] = df_monthly["Billing_Month"].apply(get_fiscal_quarter)
+
+    df_aggregated = df_monthly.groupby(["Billing_Year", "Fiscal_Quarter"]).agg({
+        'Row_Level_Savings': 'sum',
+        'Row_Level_Payout': 'sum',
+        'Cumulative_Realized_Savings': 'max',  # Highest cumulative savings in the quarter
+        'Remaining_Balance': 'min'  # Lowest balance during the quarter
+    }).reset_index()
+
+    df_aggregated["Quarter_Label"] = df_aggregated["Billing_Year"].astype(str) + " " + df_aggregated["Fiscal_Quarter"]
     x_col = "Quarter_Label"
 
-# 🔹 STEP 4: If Not Quarter, Use Monthly Aggregation
-else:
-    df_filtered_cost = df_filtered_cost[cost_columns].copy()
-
-    # Define a custom order for Billing Months (May - April)
-    month_order = ["May", "June", "July", "August", "September",
-                   "October", "November", "December", "January", "February", "March", "April"]
-
-    # Assign a numeric ordering for billing months based on the fiscal cycle
-    df_filtered_cost['Month_Order'] = df_filtered_cost['Billing_Month'].apply(lambda x: month_order.index(x))
-
-    # ✅ FIXED Aggregation: Ensure Savings & Payouts Don't Overlap Incorrectly
-    def filter_savings_or_payout(group):
-        if (group['Row_Level_Savings'] > 0).any() and (group['Row_Level_Payout'] > 0).any():
-            # If both exist, keep the one with the highest total in that month
-            if group['Row_Level_Savings'].sum() > group['Row_Level_Payout'].sum():
-                group['Row_Level_Payout'] = 0  # Remove Payout
-            else:
-                group['Row_Level_Savings'] = 0  # Remove Savings
-        return group
-
-    df_filtered_cost = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month', 'Month_Order']).agg({
-        'Row_Level_Savings': 'sum',
-        'Row_Level_Payout': 'sum',
-        'Cumulative_Realized_Savings': 'max',
-        'Remaining_Balance': 'min'
-    }).reset_index()
-
-    # ✅ Apply the fix to remove cases where both exist in a single month
-    df_filtered_cost = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month']).apply(filter_savings_or_payout).reset_index(drop=True)
-
-
-
-    # Sort by Billing Year first, then by Month Order
-    df_filtered_cost = df_filtered_cost.sort_values(by=['Billing_Year', 'Month_Order']).drop(columns=['Month_Order'])
-
-    # Create a new column for x-axis labeling using Billing_Year and Billing_Month
-    df_filtered_cost['YearMonth'] = df_filtered_cost.apply(lambda row: f"{row['Billing_Year']} {row['Billing_Month']}", axis=1)
+else:  # Default to Monthly View
+    df_aggregated = df_monthly
     x_col = "YearMonth"
 
 # 🔹 STEP 5: Create the bar chart
@@ -218,13 +236,13 @@ st.write(f"### {period_option}-Aggregated Realized Savings and Payout Uncovered"
 
 fig, ax = plt.subplots(figsize=(14, 6))
 bar_width = 0.4
-x = range(len(df_filtered_cost))
+x = range(len(df_aggregated))
 
 # Plot Realized Savings
-bars1 = ax.bar(x, df_filtered_cost['Row_Level_Savings'], width=bar_width, label='Realized Savings', color='#228B22')
+bars1 = ax.bar(x, df_aggregated['Row_Level_Savings'], width=bar_width, label='Realized Savings', color='#228B22')
 
 # Plot Payout Uncovered
-bars2 = ax.bar([i + bar_width for i in x], df_filtered_cost['Row_Level_Payout'], width=bar_width, label='Billed Amount', color='#8B0000')
+bars2 = ax.bar([i + bar_width for i in x], df_aggregated['Row_Level_Payout'], width=bar_width, label='Billed Amount', color='#8B0000')
 
 # Add labels to bars
 for bars in [bars1, bars2]:
@@ -239,16 +257,15 @@ ax.set_xlabel(period_option, fontsize=12)
 ax.set_ylabel('Amount ($)', fontsize=12)
 ax.set_title(f'{period_option}-Aggregated Realized Savings and Billed Amount', fontsize=16)
 
-# Ensure x-axis labels are aligned properly
-ax.set_xticks(range(len(df_filtered_cost)))
-ax.set_xticklabels(df_filtered_cost[x_col], rotation=45, ha='right')
+# ✅ Fix x-axis label formatting for better readability
+ax.set_xticks(range(len(df_aggregated)))
+ax.set_xticklabels(df_aggregated[x_col], rotation=45, ha='right', fontsize=10)
 
 plt.legend(fontsize=12)
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
 
 st.pyplot(fig)
-
 
 
 ################################    BREAK EVEN CHART ########################################################
