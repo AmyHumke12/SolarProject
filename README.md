@@ -19,20 +19,32 @@ This is an **ongoing project** with several **incomplete or exploratory componen
 
 ---
 
-## **Features**
-Currently, the project supports:
+## **Project Features**
 
 ### **📡 Data Collection & Processing**
-- Fetching **hourly energy production and usage** from SolarEdge.
-- Pulling **historical weather data** (temperature, cloud cover, irradiance, etc.).
-- Retrieving **hourly electric usage & cost data** from my electric provider.
-- Aligning data to match **billing cycles** (which don’t always match calendar months).
-- **General solar production estimates for my area**, merged with my personal solar data.
+- **SolarEdge Data**  
+  - **Production, consumption, net usage, and feed-in data** collected hourly.  
+  - Historical solar energy data aligned with **billing cycles**.  
 
-### **🔭 Astrological Feature Engineering**
-- **Solar angle & azimuth** (tracking the position of the sun throughout the day).
-- **Global tilted irradiance** (how much sunlight actually hits the panels).
-- **Solar day count** (days from solstice, capturing seasonal variation).
+- **Weather & Environmental Data**  
+  - Pulled from **Open-Meteo** (temperature, cloud cover, wind speed, irradiance).  
+  - **Currently not used but retained for future model refinement.**  
+
+- **General Solar Production Estimates**  
+  - Includes **regional solar production trends** from additional data sources.  
+  - Merged with actual solar production data for comparative modeling.  
+
+- **Billing & Electric Usage Data**  
+  - Extracted from **electric company billing records**.  
+  - Computes **real cost per kWh**, factoring in **excess credits and net metering rules**.
+    
+- **Solar Positioning**  
+  - **Solar angle & azimuth** for tracking the sun’s movement over time.  
+  - **Global tilted irradiance** to estimate sunlight intensity on solar panels.  
+  - **Solar day count** (days from solstice) to account for **seasonal variations**.  
+
+
+---
 
 ### **🔧 Data Cleaning & Transformation**
 - Converting solar & electric company data into a **consistent format**.
