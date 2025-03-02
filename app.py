@@ -184,7 +184,7 @@ df_monthly = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month', 'Month_O
 }).reset_index()
 
 # ✅ Apply the fix to remove cases where both exist in a single month
-df_monthly = df_monthly.groupby(['Billing_Year', 'Billing_Month']).apply(filter_savings_or_payout).reset_index(drop=True)
+df_monthly = df_monthly.groupby(['Billing_Year', 'Billing_Month'], group_keys=False).apply(filter_savings_or_payout).reset_index(drop=True)
 
 # Sort by Billing Year first, then by Month Order
 df_monthly = df_monthly.sort_values(by=['Billing_Year', 'Month_Order']).drop(columns=['Month_Order'])
