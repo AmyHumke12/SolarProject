@@ -24,27 +24,13 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Debug - List repository files
-        run: ls -R
-
       - name: Run Jupyter Notebook and Streamlit App
         run: |
-          pip install nbconvert streamlit  # Ensures both dependencies are installed
-          python scripts/update_data.py
-
-        
-      - name: Debug - Check if Pickle File is Ignored
-        run: cat .gitignore | grep 'pkl' || echo "No .pkl ignore rule found"
-        
-      - name: Debug - Check Pickle File
-        run: |
-          if [ -f "bi_solar_dashboard_final.pkl" ]; then
-            echo "✅ Pickle file found!"
-            ls -lh bi_solar_dashboard_final.pkl
-          else
-            echo "❌ Pickle file not found!"
-            exit 1  # Stop workflow if the file is missing
-          fi
+          pip install nbconvert streamlit
+          python scripts/update_data.py | tee execution_log.txt
+          
+      - name: Debug - Show Execution Log
+        run: cat execution_log.txt
 
       - name: Commit and Push if changed (Force Pickle Update)
         env:
