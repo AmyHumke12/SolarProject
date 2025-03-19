@@ -33,7 +33,7 @@ jobs:
       - name: Debug - Check if Pickle File is Ignored
         run: cat .gitignore | grep 'pkl' || echo "No .pkl ignore rule found"
         
-            - name: Debug - Check Pickle File
+      - name: Debug - Check Pickle File
         run: |
           if [ -f "bi_solar_dashboard_final.pkl" ]; then
             echo "✅ Pickle file found!"
