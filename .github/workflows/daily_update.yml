@@ -29,10 +29,9 @@ jobs:
       - name: Run data refresh script
         run: python scripts/update_data.py
         
-      - name: Debug - Show Git Status
-        run: |
-          git status
-          git log -1
+      - name: Debug - Check if Pickle File is Ignored
+        run: cat .gitignore | grep 'pkl' || echo "No .pkl ignore rule found"
+
 
       - name: Commit and Push if changed (Force Update)
         env:
