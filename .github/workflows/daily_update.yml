@@ -24,7 +24,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run data refresh script
-        run: python scripts/update_data.py
+        run: python SolarProject/scripts/update_data.py
 
       - name: Commit and Push if changed
       env:
