@@ -13,6 +13,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: false  # This prevents Git from checking submodules
+          fetch-depth: 0 # Ensures full history is fetched, preventing sync issues
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -32,16 +33,17 @@ jobs:
       - name: Debug - Check if Pickle File is Ignored
         run: cat .gitignore | grep 'pkl' || echo "No .pkl ignore rule found"
         
-      - name: Debug - Check Pickle File
+            - name: Debug - Check Pickle File
         run: |
           if [ -f "bi_solar_dashboard_final.pkl" ]; then
             echo "✅ Pickle file found!"
             ls -lh bi_solar_dashboard_final.pkl
           else
             echo "❌ Pickle file not found!"
+            exit 1  # Stop workflow if the file is missing
           fi
 
-      - name: Commit and Push if changed (Track Pickle File)
+      - name: Commit and Push if changed (Force Pickle Update)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -56,20 +58,24 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-          # Ensure Git tracks the pickle file
+          # Debug: Check if Pickle File Exists
           if [ -f "bi_solar_dashboard_final.pkl" ]; then
-            git add bi_solar_dashboard_final.pkl
+            echo "✅ Pickle file found!"
+            ls -lh bi_solar_dashboard_final.pkl
           else
             echo "❌ Pickle file not found!"
-            exit 1  # Fail workflow if file is missing
+            exit 1  # Fail workflow if missing
           fi
 
-          # Commit only if there are changes
-          git commit -m "Automated daily data update - Pickle File" || echo "No changes to commit"
+          # Modify the file slightly to force Git to detect a change
+          echo "Last updated: $(date)" >> bi_solar_dashboard_final.pkl
 
-          # Push changes
+          # Ensure Git Tracks the File
+          git add bi_solar_dashboard_final.pkl
+
+          # Commit and Push
+          git commit -m "Automated daily update - $(date)" || echo "No changes to commit"
           git push origin main --force
-
 
 
 
