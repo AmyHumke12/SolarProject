@@ -27,8 +27,11 @@ jobs:
       - name: Debug - List repository files
         run: ls -R
 
-      - name: Run data refresh script
-        run: python scripts/update_data.py
+      - name: Run Jupyter Notebook and Streamlit App
+        run: |
+          pip install nbconvert streamlit  # Ensures both dependencies are installed
+          python scripts/update_data.py
+
         
       - name: Debug - Check if Pickle File is Ignored
         run: cat .gitignore | grep 'pkl' || echo "No .pkl ignore rule found"
