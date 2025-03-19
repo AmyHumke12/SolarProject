@@ -31,9 +31,17 @@ jobs:
         
       - name: Debug - Check if Pickle File is Ignored
         run: cat .gitignore | grep 'pkl' || echo "No .pkl ignore rule found"
+        
+      - name: Debug - Check Pickle File
+        run: |
+          if [ -f "bi_solar_dashboard_final.pkl" ]; then
+            echo "✅ Pickle file found!"
+            ls -lh bi_solar_dashboard_final.pkl
+          else
+            echo "❌ Pickle file not found!"
+          fi
 
-
-      - name: Commit and Push if changed (Force Update)
+      - name: Commit and Push if changed (Track Pickle File)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -48,15 +56,20 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-          # Force Git to detect changes
-          echo "Last updated on $(date)" > last_update.txt
-          git add last_update.txt
+          # Ensure Git tracks the pickle file
+          if [ -f "bi_solar_dashboard_final.pkl" ]; then
+            git add bi_solar_dashboard_final.pkl
+          else
+            echo "❌ Pickle file not found!"
+            exit 1  # Fail workflow if file is missing
+          fi
 
           # Commit only if there are changes
-          git commit -m "Automated daily data update" || echo "No changes to commit"
+          git commit -m "Automated daily data update - Pickle File" || echo "No changes to commit"
 
-          # Push to main branch
+          # Push changes
           git push origin main --force
+
 
 
 
