@@ -27,9 +27,7 @@ jobs:
         run: ls -R
 
       - name: Run data refresh script
-        run: |
-          cd SolarProject
-          python scripts/update_data.py
+        run: python scripts/update_data.py
 
       - name: Commit and Push if changed
         env:
