@@ -34,7 +34,7 @@ jobs:
           git status
           git log -1
 
-      - name: Commit and Push if changed (Force Sync)
+      - name: Commit and Push if changed (Force Update)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -45,14 +45,20 @@ jobs:
           # Ensure we are on the main branch
           git checkout main
           
-          # Fetch latest changes and reset to match the remote
+          # Fetch latest changes and reset to match remote
           git fetch origin main
           git reset --hard origin/main
-          
-          # Apply any local changes and push
-          git add -A
+
+          # Force Git to detect changes
+          echo "Last updated on $(date)" > last_update.txt
+          git add last_update.txt
+
+          # Commit only if there are changes
           git commit -m "Automated daily data update" || echo "No changes to commit"
+
+          # Push to main branch
           git push origin main --force
+
 
 
 
