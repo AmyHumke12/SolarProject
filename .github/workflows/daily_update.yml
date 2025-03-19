@@ -25,9 +25,13 @@ jobs:
         run: python scripts/update_data.py
 
       - name: Commit and Push if changed
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add -A
-          git commit -m "Automated daily data update" || echo "No changes to commit"
-          git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+        git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}
+        git add -A
+        git commit -m "Automated daily data update" || echo "No changes to commit"
+        git push
+
