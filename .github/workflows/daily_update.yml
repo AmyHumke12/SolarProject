@@ -28,6 +28,11 @@ jobs:
 
       - name: Run data refresh script
         run: python scripts/update_data.py
+        
+      - name: Debug - Show Git Status
+        run: |
+          git status
+          git log -1
 
       - name: Commit and Push if changed (Force Sync)
         env:
