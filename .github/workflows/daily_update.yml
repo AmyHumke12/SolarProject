@@ -25,15 +25,12 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt  # Ensures all required dependencies are installed
 
-      - name: Install Jupyter Kernel
-        run: python -m ipykernel install --user --name=python3
-
-      - name: Install Jupyter Kernel
+      - name: Install Jupyter Kernel (Fixed)
         run: |
           pip install --upgrade pip
           pip install notebook ipykernel nbconvert pandas requests streamlit  # Install all required packages
+          python -m pip show ipykernel  # Debug: Check if ipykernel is installed
           python -m ipykernel install --user --name=python3  # Register the Jupyter kernel
-
 
       - name: Run Jupyter Notebook
         run: |
