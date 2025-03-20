@@ -2,7 +2,7 @@ name: Daily Refresh
 
 on:
   schedule:
-    - cron: '0 13 * * *'  # Runs daily at 6 AM UTC
+    - cron: '0 13 * * *'  # Runs daily at 8 AM Central Time (1 PM UTC)
   workflow_dispatch: # Allows manual execution from GitHub UI
 
 jobs:
@@ -12,27 +12,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: false  # This prevents Git from checking submodules
-          fetch-depth: 0 # Ensures full history is fetched, preventing sync issues
+          submodules: false  # Prevents submodule errors
+          fetch-depth: 0  # Ensures full history is fetched, preventing sync issues
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          pip install -r requirements.txt
+          pip install --upgrade pip
+          pip install -r requirements.txt  # Ensures all required dependencies are installed
 
-      - name: Run Jupyter Notebook and Streamlit App
+      - name: Install Jupyter Kernel
+        run: python -m ipykernel install --user --name=python3
+
+      - name: Run Data Update Script
         run: |
-          pip install nbconvert streamlit
           python scripts/update_data.py | tee execution_log.txt
-          
+
+      - name: Run Jupyter Notebook
+        run: |
+          jupyter nbconvert --to notebook --execute BI_Solar_Production_Prediction.ipynb \
+            --ExecutePreprocessor.kernel_name=python3 --output output.ipynb | tee -a execution_log.txt
+
       - name: Debug - Show Execution Log
         run: cat execution_log.txt
 
-      - name: Commit and Push if changed (Force Pickle Update)
+      - name: Commit and Push if Changed (Force Pickle Update)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -65,7 +73,3 @@ jobs:
           # Commit and Push
           git commit -m "Automated daily update - $(date)" || echo "No changes to commit"
           git push origin main --force
-
-
-
-
