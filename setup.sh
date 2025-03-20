@@ -4,6 +4,9 @@ set -e  # Exit on error
 echo "🔹 Updating pip..."
 pip install --upgrade pip
 
+echo "🔹 Installing Jupyter Kernel first..."
+pip install ipykernel
+
 echo "🔹 Installing dependencies from requirements.txt..."
 pip install -r requirements.txt  # Keeps core dependencies
 
@@ -12,7 +15,7 @@ pip install \
     astral pandasql requests-cache retry-requests numpy pandas \
     openpyxl holidays requests-ratelimiter matplotlib seaborn \
     scipy requests openmeteo_requests pytz scikit-learn \
-    IPython urllib3
+    IPython urllib3 requests-ratelimiter
 
-echo "🔹 Installing Jupyter kernel..."
+echo "🔹 Registering Jupyter kernel..."
 python -m ipykernel install --user --name=python3
