@@ -12,7 +12,7 @@ pip install \
     astral pandasql requests-cache retry-requests numpy pandas \
     openpyxl holidays requests-ratelimiter matplotlib seaborn \
     scipy requests openmeteo_requests pytz scikit-learn \
-    IPython json urllib3
+    IPython urllib3
 
 echo "🔹 Installing Jupyter kernel..."
 python -m ipykernel install --user --name=python3
