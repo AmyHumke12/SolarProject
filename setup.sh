@@ -5,13 +5,14 @@ echo "🔹 Updating pip..."
 pip install --upgrade pip
 
 echo "🔹 Installing dependencies from requirements.txt..."
-pip install -r requirements.txt
+pip install -r requirements.txt  # If this contains most dependencies, keep it
 
 echo "🔹 Installing additional dependencies..."
 pip install \
-    matplotlib seaborn scipy requests holidays requests_cache \
-    pandasql pytz numpy pickle scikit-learn IPython requests_ratelimiter \
-    urllib3 base64 json openmeteo_requests
+    astral pandasql requests-cache retry-requests numpy pandas \
+    openpyxl holidays requests-ratelimiter matplotlib seaborn \
+    scipy requests openmeteo_requests pytz pickle scikit-learn \
+    IPython base64 json urllib3
 
 echo "🔹 Installing Jupyter kernel..."
 python -m ipykernel install --user --name=python3
