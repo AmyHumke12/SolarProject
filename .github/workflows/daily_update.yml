@@ -20,17 +20,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt  # Ensures all required dependencies are installed
-
-      - name: Install Jupyter Kernel (Fixed)
-        run: |
-          pip install --upgrade pip
-          pip install notebook ipykernel nbconvert pandas requests streamlit  # Install all required packages
-          python -m pip show ipykernel  # Debug: Check if ipykernel is installed
-          python -m ipykernel install --user --name=python3  # Register the Jupyter kernel
+      - name: Run Setup Script
+        run: bash setup.sh  # Calls setup.sh to install all dependencies
 
       - name: Run Jupyter Notebook
         run: |
