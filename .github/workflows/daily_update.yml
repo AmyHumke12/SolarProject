@@ -28,9 +28,12 @@ jobs:
       - name: Install Jupyter Kernel
         run: python -m ipykernel install --user --name=python3
 
-      - name: Run Data Update Script
+      - name: Install Jupyter Kernel
         run: |
-          python scripts/update_data.py | tee execution_log.txt
+          pip install --upgrade pip
+          pip install notebook ipykernel nbconvert pandas requests streamlit  # Install all required packages
+          python -m ipykernel install --user --name=python3  # Register the Jupyter kernel
+
 
       - name: Run Jupyter Notebook
         run: |
