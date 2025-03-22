@@ -1,3 +1,7 @@
 nbconvert
 pandas
 streamlit
+numpy
+matplotlib
+requests
+
