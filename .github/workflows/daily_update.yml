@@ -3,7 +3,7 @@ name: Daily Refresh
 on:
   schedule:
     - cron: '0 13 * * *'  # Runs daily at 8 AM Central Time (1 PM UTC)
-  workflow_dispatch: # Allows manual execution from GitHub UI
+  workflow_dispatch:  # Allows manual execution from GitHub UI
 
 jobs:
   update-data:
@@ -12,8 +12,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: false  # Prevents submodule errors
-          fetch-depth: 0  # Ensures full history is fetched, preventing sync issues
+          submodules: false
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -21,12 +21,13 @@ jobs:
           python-version: '3.11'
 
       - name: Run Setup Script
-        run: bash setup.sh  # Calls setup.sh to install all dependencies
+        run: bash setup.sh
 
       - name: Run update_data.py
         env:
           SOLAREDGE_API_KEY: ${{ secrets.SOLAREDGE_API_KEY }}
           SOLAREDGE_SITE_ID: ${{ secrets.SOLAREDGE_SITE_ID }}
+          GIT: ${{ secrets.GITHUB_TOKEN }}  # ✅ This line enables upload to GitHub from notebook
         run: |
           python scripts/update_data.py | tee -a execution_log.txt
 
@@ -37,7 +38,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "github-actions"
+          git config --global user.name "github-actions"   # ✅ Set identity before commit
           git config --global user.email "github-actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
@@ -45,12 +46,8 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-          # Touch pickle file to force change
           echo "Last updated: $(date)" >> bi_solar_dashboard_final.pkl
           git add bi_solar_dashboard_final.pkl
 
           git commit -m "Automated daily update - $(date)" || echo "No changes to commit"
           git push origin main --force
-    
-
-
