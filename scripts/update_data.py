@@ -3,7 +3,7 @@ import time
 
 print("🔹 Running update_data.py...")
 
-start_time = time.time()  # Track execution time
+start_time = time.time()
 
 # Ensure Jupyter is installed
 os.system("pip install nbconvert")
@@ -18,16 +18,5 @@ else:
     print(f"❌ Notebook not found: {notebook_path}")
     exit(1)
 
-# Run the Streamlit app
-app_path = "app.py"
-if os.path.exists(app_path):
-    print(f"🚀 Running Streamlit app: {app_path}")
-    os.system(f"streamlit run {app_path} --server.headless true &")
-    print("✅ Streamlit app executed.")
-else:
-    print(f"❌ Streamlit app not found: {app_path}")
-    exit(1)
-
 end_time = time.time()
-elapsed_time = end_time - start_time
-print(f"🕒 Total Execution Time: {elapsed_time:.2f} seconds")
+print(f"🕒 Total Execution Time: {end_time - start_time:.2f} seconds")
