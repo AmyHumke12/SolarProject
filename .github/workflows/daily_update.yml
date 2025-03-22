@@ -51,12 +51,6 @@ jobs:
 
           git commit -m "Automated daily update - $(date)" || echo "No changes to commit"
           git push origin main --force
-          
-      - name: Run Streamlit app briefly to refresh it
-        run: |
-          pip install streamlit
-          streamlit run app.py --server.headless true --browser.gatherUsageStats false &
-          sleep 20  # Allow Streamlit to fully initialize
-          pkill -f streamlit
+    
 
 
