@@ -41,28 +41,22 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
-          # Ensure we are on the main branch
           git checkout main
-          
-          # Fetch latest changes and reset to match remote
           git fetch origin main
           git reset --hard origin/main
 
-          # Debug: Check if Pickle File Exists
-          if [ -f "bi_solar_dashboard_final.pkl" ]; then
-            echo "✅ Pickle file found!"
-            ls -lh bi_solar_dashboard_final.pkl
-          else
-            echo "❌ Pickle file not found!"
-            exit 1  # Fail workflow if missing
-          fi
-
-          # Modify the file slightly to force Git to detect a change
+          # Touch pickle file to force change
           echo "Last updated: $(date)" >> bi_solar_dashboard_final.pkl
-
-          # Ensure Git Tracks the File
           git add bi_solar_dashboard_final.pkl
 
-          # Commit and Push
           git commit -m "Automated daily update - $(date)" || echo "No changes to commit"
           git push origin main --force
+          
+      - name: Run Streamlit app briefly to refresh it
+        run: |
+          pip install streamlit
+          streamlit run app.py --server.headless true --browser.gatherUsageStats false &
+          sleep 20  # Allow Streamlit to fully initialize
+          pkill -f streamlit
+
+
