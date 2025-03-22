@@ -34,20 +34,32 @@ jobs:
       - name: Debug - Show Execution Log
         run: cat execution_log.txt
 
+      - name: git config --list
+        run: git config --list
+
       - name: Commit and Push if Changed (Force Pickle Update)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "github-actions"   # ✅ Set identity before commit
+          # ✅ Always set Git identity first
+          git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+
+          # ✅ Set the remote URL with token
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
+          # ✅ Checkout and sync main
           git checkout main
           git fetch origin main
           git reset --hard origin/main
 
+          # ✅ Force a change to pickle to trigger commit
           echo "Last updated: $(date)" >> bi_solar_dashboard_final.pkl
           git add bi_solar_dashboard_final.pkl
 
+          # ✅ Commit (skip error if nothing changed)
           git commit -m "Automated daily update - $(date)" || echo "No changes to commit"
+
+          # ✅ Push with auth
           git push origin main --force
+
