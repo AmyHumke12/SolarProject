@@ -23,10 +23,12 @@ jobs:
       - name: Run Setup Script
         run: bash setup.sh  # Calls setup.sh to install all dependencies
 
-      - name: Run Jupyter Notebook
+      - name: Run update_data.py
+        env:
+          SOLAREDGE_API_KEY: ${{ secrets.SOLAREDGE_API_KEY }}
+          SOLAREDGE_SITE_ID: ${{ secrets.SOLAREDGE_SITE_ID }}
         run: |
-          jupyter nbconvert --to notebook --execute BI_Solar_Production_Prediction.ipynb \
-            --ExecutePreprocessor.kernel_name=python3 --output output.ipynb | tee -a execution_log.txt
+          python scripts/update_data.py | tee -a execution_log.txt
 
       - name: Debug - Show Execution Log
         run: cat execution_log.txt
