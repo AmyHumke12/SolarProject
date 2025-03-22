@@ -19,12 +19,19 @@ github_url = "https://raw.githubusercontent.com/AmyHumke12/SolarProject/main/bi_
 # Load the pickle file from GitHub
 @st.cache_data
 def load_data():
-    response = requests.get(github_url)
-    if response.status_code == 200:
+    try:
+        response = requests.get(github_url, timeout=10)
+        response.raise_for_status()
         return pickle.load(io.BytesIO(response.content))
-    else:
-        st.error(f"❌ Failed to load bi_solar_dashboard_final.pkl. HTTP Status: {response.status_code}")
-        return None
+    except requests.exceptions.RequestException as req_err:
+        st.error(f"❌ Network error while loading data: {req_err}")
+    except pickle.UnpicklingError:
+        st.error("❌ Failed to load data: Pickle file may be corrupted.")
+    except Exception as e:
+        st.error(f"❌ Unexpected error: {e}")
+    return None
+
+
 
 # Load data
 df = load_data()
