@@ -4,4 +4,8 @@ streamlit
 numpy
 matplotlib
 requests
+pickle-mixin
+requests_cache
+pytz
+openmeteo-requests
 
