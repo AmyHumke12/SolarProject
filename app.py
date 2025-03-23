@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 
 # Define GitHub raw file URL
-github_url = "https://raw.githubusercontent.com/AmyHumke12/SolarProject/main/bi_solar_dashboard_final.pkl"
+github_url = "https://raw.githubusercontent.com/AmyHumke12/SolarProject/main/bi_solar_dashboard_final_csv.csv"
 
 # Load the pickle file from GitHub
 @st.cache_data
