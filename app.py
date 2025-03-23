@@ -32,9 +32,6 @@ df = load_data()
 
 if df is not None:
     st.title("Solar Production Dashboard")
-    
-    # Convert date column
-    df['date_timestamp'] = pd.to_datetime(df['date_timestamp'])
 
     # Aggregation Level Selector (Year, Quarter, Month)
     period_option = st.sidebar.selectbox(
