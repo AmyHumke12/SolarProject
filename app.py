@@ -134,13 +134,14 @@ ax.legend(loc="upper left")
 ax.grid(True, linestyle='--', alpha=0.6)
 plt.xticks(rotation=45)
 
-st.pyplot(fig)
-
+# ✅ Make plot responsive
+st.pyplot(fig, use_container_width=True)
 
 
 
 
 ################################    COST BAR CHART ########################################################
+################################ COST BAR CHART FIXED #######################################
 
 # Define required columns for the cost bar chart
 cost_columns = ['Billing_Year', 'Billing_Month', 'Row_Level_Savings', 
@@ -155,23 +156,22 @@ df_filtered_cost = df[
 # 🔹 STEP 2: Ensure `df_filtered_cost` Exists Even If Empty
 if df_filtered_cost.empty:
     st.warning("⚠️ No cost data available for the selected date range.")
-    df_filtered_cost = pd.DataFrame(columns=cost_columns)  # Define an empty DataFrame with correct columns
+    df_filtered_cost = pd.DataFrame(columns=cost_columns)
 
-# Define a custom order for Billing Months (May - April)
+# Custom month order
 month_order = ["May", "June", "July", "August", "September",
                "October", "November", "December", "January", "February", "March", "April"]
 
-# Assign a numeric ordering for billing months based on the fiscal cycle
+# Month numeric order
 df_filtered_cost['Month_Order'] = df_filtered_cost['Billing_Month'].apply(lambda x: month_order.index(x))
 
-# 🔹 STEP 3: Monthly Aggregation (BASE DATA)
+# 🔹 STEP 3: Monthly Aggregation
 def filter_savings_or_payout(group):
     if (group['Row_Level_Savings'] > 0).any() and (group['Row_Level_Payout'] > 0).any():
-        # Keep the one with the highest total in that month
         if group['Row_Level_Savings'].sum() > group['Row_Level_Payout'].sum():
-            group['Row_Level_Payout'] = 0  # Remove Payout
+            group['Row_Level_Payout'] = 0
         else:
-            group['Row_Level_Savings'] = 0  # Remove Savings
+            group['Row_Level_Savings'] = 0
     return group
 
 df_monthly = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month', 'Month_Order']).agg({
@@ -181,51 +181,42 @@ df_monthly = df_filtered_cost.groupby(['Billing_Year', 'Billing_Month', 'Month_O
     'Remaining_Balance': 'min'
 }).reset_index()
 
-# ✅ Apply the fix to remove cases where both exist in a single month
 df_monthly = df_monthly.groupby(['Billing_Year', 'Billing_Month'], group_keys=False).apply(filter_savings_or_payout).reset_index(drop=True)
 
-# Sort by Billing Year first, then by Month Order
 df_monthly = df_monthly.sort_values(by=['Billing_Year', 'Month_Order']).drop(columns=['Month_Order'])
 
-# Create a new column for x-axis labeling using Billing_Year and Billing_Month
+# Create YearMonth column
 df_monthly['YearMonth'] = df_monthly.apply(lambda row: f"{row['Billing_Year']} {row['Billing_Month']}", axis=1)
 
-# 🔹 STEP 4: Aggregate from the Correct Monthly Data
+# 🔹 STEP 4: Aggregation based on Period Option
 if period_option == "Year":
     df_aggregated = df_monthly.groupby(["Billing_Year"]).agg({
         'Row_Level_Savings': 'sum',
         'Row_Level_Payout': 'sum',
-        'Cumulative_Realized_Savings': 'max',  # Highest cumulative savings in the year
-        'Remaining_Balance': 'min'  # Lowest remaining balance
+        'Cumulative_Realized_Savings': 'max',
+        'Remaining_Balance': 'min'
     }).reset_index()
-
     x_col = "Billing_Year"
 
 elif period_option == "Quarter":
-    # Map Billing_Month to Fiscal Quarter
     def get_fiscal_quarter(month):
-        if month in ["May", "June", "July"]:
-            return "Q1"
-        elif month in ["August", "September", "October"]:
-            return "Q2"
-        elif month in ["November", "December", "January"]:
-            return "Q3"
-        else:
-            return "Q4"
+        if month in ["May", "June", "July"]: return "Q1"
+        elif month in ["August", "September", "October"]: return "Q2"
+        elif month in ["November", "December", "January"]: return "Q3"
+        else: return "Q4"
 
     df_monthly["Fiscal_Quarter"] = df_monthly["Billing_Month"].apply(get_fiscal_quarter)
-
     df_aggregated = df_monthly.groupby(["Billing_Year", "Fiscal_Quarter"]).agg({
         'Row_Level_Savings': 'sum',
         'Row_Level_Payout': 'sum',
-        'Cumulative_Realized_Savings': 'max',  # Highest cumulative savings in the quarter
-        'Remaining_Balance': 'min'  # Lowest balance during the quarter
+        'Cumulative_Realized_Savings': 'max',
+        'Remaining_Balance': 'min'
     }).reset_index()
 
     df_aggregated["Quarter_Label"] = df_aggregated["Billing_Year"].astype(str) + " " + df_aggregated["Fiscal_Quarter"]
     x_col = "Quarter_Label"
 
-else:  # Default to Monthly View
+else:
     df_aggregated = df_monthly
     x_col = "YearMonth"
 
@@ -236,34 +227,34 @@ fig, ax = plt.subplots(figsize=(14, 6))
 bar_width = 0.4
 x = range(len(df_aggregated))
 
-# Plot Realized Savings
-bars1 = ax.bar(x, df_aggregated['Row_Level_Savings'], width=bar_width, label='Realized Savings', color='#228B22')
+# Realized Savings
+bars1 = ax.bar(x, df_aggregated['Row_Level_Savings'], bar_width, label='Realized Savings', color='#228B22')
+# Payout Uncovered
+bars2 = ax.bar([i + bar_width for i in x], df_aggregated['Row_Level_Payout'], bar_width, label='Billed Amount', color='#8B0000')
 
-# Plot Payout Uncovered
-bars2 = ax.bar([i + bar_width for i in x], df_aggregated['Row_Level_Payout'], width=bar_width, label='Billed Amount', color='#8B0000')
-
-# Add labels to bars
+# Add bar labels
 for bars in [bars1, bars2]:
     for bar in bars:
         height = bar.get_height()
         if height > 0:
-            ax.text(bar.get_x() + bar.get_width() / 2, height + 2, f'${int(height)}',
-                    ha='center', va='bottom', fontsize=8)
+            ax.text(bar.get_x() + bar.get_width()/2, height + 2, f'${int(height)}', ha='center', va='bottom', fontsize=8)
 
-# Customize the chart
+# Axis labels and title
 ax.set_xlabel(period_option, fontsize=12)
 ax.set_ylabel('Amount ($)', fontsize=12)
 ax.set_title(f'{period_option}-Aggregated Realized Savings and Billed Amount', fontsize=16)
 
-# ✅ Fix x-axis label formatting for better readability
-ax.set_xticks(range(len(df_aggregated)))
+# X-axis labels formatting
+ax.set_xticks([i + bar_width / 2 for i in x])
 ax.set_xticklabels(df_aggregated[x_col], rotation=45, ha='right', fontsize=10)
 
-plt.legend(fontsize=12)
-plt.grid(axis='y', linestyle='--', alpha=0.7)
+# Legend and grid
+ax.legend(fontsize=12)
+ax.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
 
-st.pyplot(fig)
+# Responsive scaling
+st.pyplot(fig, use_container_width=True)
 
 
 ################################    BREAK EVEN CHART ########################################################
@@ -336,4 +327,6 @@ ax.legend(loc='upper right')
 ax.grid(True)
 plt.tight_layout()
 
-st.pyplot(fig)
+# Add responsive scaling
+st.pyplot(fig, use_container_width=True)
+
