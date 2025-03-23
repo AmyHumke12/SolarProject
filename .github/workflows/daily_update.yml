@@ -54,8 +54,8 @@ jobs:
           git reset --hard origin/main
 
           # ✅ Force a change to pickle to trigger commit
-          echo "Last updated: $(date)" >> bi_solar_dashboard_final.pkl
-          git add bi_solar_dashboard_final.pkl
+          echo "Last updated: $(date)" >> bi_solar_dashboard_final_csv.csv
+          git add bi_solar_dashboard_final_csv.csv
 
           # ✅ Commit (skip error if nothing changed)
           git commit -m "Automated daily update - $(date)" || echo "No changes to commit"
