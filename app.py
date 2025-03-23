@@ -20,18 +20,12 @@ github_url = "https://raw.githubusercontent.com/AmyHumke12/SolarProject/main/bi_
 @st.cache_data
 def load_data():
     try:
-        response = requests.get(github_url, timeout=10)
-        response.raise_for_status()
-        return pickle.load(io.BytesIO(response.content))
-    except requests.exceptions.RequestException as req_err:
-        st.error(f"❌ Network error while loading data: {req_err}")
-    except pickle.UnpicklingError:
-        st.error("❌ Failed to load data: Pickle file may be corrupted.")
+        csv_url = "https://raw.githubusercontent.com/AmyHumke12/SolarProject/main/bi_solar_dashboard_final_csv.csv"
+        df = pd.read_csv(csv_url, parse_dates=["date_timestamp"])
+        return df
     except Exception as e:
-        st.error(f"❌ Unexpected error: {e}")
-    return None
-
-
+        st.error(f"❌ Failed to load dashboard data from CSV: {e}")
+        return pd.DataFrame()
 
 # Load data
 df = load_data()
