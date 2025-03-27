@@ -56,5 +56,18 @@ jobs:
 
           git commit -m "Automated daily CSV update - $(date)" || echo "No changes to commit"
           git push origin main
+      # ----------------------------
+      # NEW STEPS FOR GOOGLE DRIVE
+      # ----------------------------
+      - name: Install Google Drive libraries
+        run: |
+          pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+
+      - name: Upload CSV to Google Drive
+        env:
+          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          python scripts/gdrive_upload.py
 
 
