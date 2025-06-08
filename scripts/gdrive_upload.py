@@ -42,11 +42,31 @@ def main():
             "name": local_csv,
             "parents": [folder_id],
         }
-        drive_service.files().create(
+        created_file = drive_service.files().create(
             body=file_metadata,
-            media_body=media_body
+            media_body=media_body,
+            fields="id"
         ).execute()
+        file_id = created_file["id"]
         print(f"✅ Uploaded new '{local_csv}' to folder {folder_id}")
+
+    # ✅ NEW: Share with your Gmail
+    your_gmail = "amyhumke@gmail.com"
+    drive_service.permissions().create(
+        fileId=file_id,
+        body={"type": "user", "role": "writer", "emailAddress": your_gmail},
+        fields="id"
+    ).execute()
+    print(f"🔗 Shared '{local_csv}' with {your_gmail}")
+
+    # ✅ NEW: List folder contents
+    folder_contents = drive_service.files().list(
+        q=f"'{folder_id}' in parents and trashed=false",
+        fields="files(name,id,createdTime)"
+    ).execute().get("files", [])
+    print(f"\n📂 Files in folder {folder_id}:")
+    for f in folder_contents:
+        print(f" - {f['name']}  (id: {f['id']}, created: {f['createdTime']})")
 
 if __name__ == "__main__":
     main()
